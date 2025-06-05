@@ -1,0 +1,168 @@
+syntax = "proto3";
+
+package user;
+
+
+service UserService {
+
+  rpc Create(CreateUserRequest) returns (UserResponse) {}
+
+  rpc FindAll(FindAllRequest) returns (UsersResponse) {}
+
+  rpc Search(SearchRequest) returns (UsersResponse) {}
+
+  rpc FindOne(FindOneRequest) returns (UserResponse) {}
+
+  rpc FindByEmail(FindByEmailRequest) returns (UserResponse) {}
+
+  rpc FindByUsername(FindByUsernameRequest) returns (UserResponse) {}
+
+  rpc Update(UpdateUserRequest) returns (UserResponse) {}
+
+  rpc Remove(RemoveRequest) returns (Empty) {}
+
+  rpc Follow(FollowRequest) returns (UserResponse) {}
+
+  rpc Unfollow(UnfollowRequest) returns (UserResponse) {}
+
+  rpc GetFollowers(GetFollowersRequest) returns (UsersResponse) {}
+
+  rpc GetFollowing(GetFollowingRequest) returns (UsersResponse) {}
+
+  rpc BlockUser(BlockUserRequest) returns (UserResponse) {}
+
+  rpc UnblockUser(UnblockUserRequest) returns (UserResponse) {}
+}
+
+service AdminService {
+  rpc BanUser(BanUserRequest) returns (UserResponse) {}
+
+  rpc UnbanUser(UnbanUserRequest) returns (UserResponse) {}
+}
+
+
+
+message CreateUserRequest {
+  string email = 1;
+  string username = 2;
+  string fullName = 3;
+  string password = 4;
+}
+
+message FindAllRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message SearchRequest {
+  string query = 1;
+  int32 page = 2;
+}
+
+message FindOneRequest {
+  string id = 1;
+}
+
+message FindByEmailRequest {
+  string email = 1;
+}
+
+message FindByUsernameRequest {
+  string username = 1;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  optional string email = 2;
+  optional string username = 3;
+  optional string fullName = 4;
+  optional string password = 5;
+}
+
+message RemoveRequest {
+  string id = 1;
+}
+
+message FollowRequest {
+  string userId = 1;
+  string targetId = 2;
+}
+
+message UnfollowRequest {
+  string userId = 1;
+  string targetId = 2;
+}
+
+message GetFollowersRequest {
+  string userId = 1;
+  int32 page = 2;
+}
+
+message GetFollowingRequest {
+  string userId = 1;
+  int32 page = 2;
+}
+
+message BlockUserRequest {
+  string currentUserId = 1;
+  string userId = 2;
+}
+
+message UnblockUserRequest {
+  string currentUserId = 1;
+  string userId = 2;
+}
+
+message UserResponse {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+  string fullName = 4;
+  repeated string followers = 5;
+  repeated string following = 6;
+  repeated string blockedUsers = 7;
+  int32 followersCount = 8; 
+}
+
+message UsersResponse {
+  repeated UserResponse users = 1;
+  int32 totalCount = 2;
+}
+
+message BanUserRequest {
+  string adminId = 1;
+  string targetId = 2;
+  optional string reason = 3;
+}
+
+message UnbanUserRequest {
+  string adminId = 1;
+  string targetId = 2;
+}
+
+message UserResponse {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+  string fullName = 4;
+  string bio = 5;
+  string accountType = 6;
+  string profilePicture = 7;
+  int32 followersCount = 8;
+  int32 followingCount = 9;
+  repeated string followers = 10;
+  repeated string following = 11;
+  repeated string posts = 12;
+  repeated string blockedUsers = 13;
+  bool isBanned = 14; 
+  optional string banReason = 15; 
+  
+}
+
+
+message UsersResponse {
+  repeated UserResponse users = 1;
+  int32 totalCount = 2;
+}
+
+message Empty {}
