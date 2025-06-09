@@ -19,6 +19,7 @@ import { QueryUserDto } from './dto/query-user.dto';
 import { BlockUserDto } from './dto/block-user.dto';
 import { User } from './schemas/user.schema';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { GrpcMethod } from '@nestjs/microservices';
 //import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
 @Controller('users')
@@ -207,5 +208,10 @@ export class UserController {
     blockUserDto: BlockUserDto,
   ): Promise<User | null> {
     return this.userService.unblockUser(id, blockUserDto);
+  }
+
+  @GrpcMethod('UserService', 'ValidateUser')
+  validateUser(id: string) {
+    return this.userService.validateUser(id);
   }
 }

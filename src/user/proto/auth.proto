@@ -3,34 +3,68 @@ syntax = "proto3";
 package auth;
 
 service AuthService {
-  rpc Register (CreateUserDto) returns (User) {}
-  rpc Login (LoginDto) returns (LoginResponse) {}
+  rpc GenerateToken (GenerateTokenRequest) returns (TokenResponse);
+  rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc Logout (LogoutRequest) returns (LogoutResponse);
+  rpc GoogleSignup (GoogleSignupRequest) returns (GoogleSignupResponse);
+  rpc RegenerateAccessToken(RegenerateAccessTokenRequest) returns (RegenerateAccessTokenResponse);
 }
 
-message CreateUserDto {
-  string email = 1;
-  string password = 2;
-  string fullName = 3;
-}
-
-message LoginDto {
-  string email = 1;
-  string password = 2;
-}
-
-message User {
-  string id = 1;
+message GenerateTokenRequest {
+  string userId = 1;
   string email = 2;
-  string fullName = 3;
+  string role = 3;
+  string deviceId = 4;
 }
 
-message LoginResponse {
+message TokenResponse {
   string access_token = 1;
-  UserInfo user = 2;
+  string refresh_token = 2;
 }
 
-message UserInfo {
-  string id = 1;
-  string email = 2;
-  string name = 3;
+message ValidateTokenRequest {
+  string accessToken = 1;
 }
+
+message ValidateTokenResponse {
+  string userId = 1;
+  string email = 2;
+  string role = 3;
+  int64 issuedAt = 4;
+  int64 expiresAt = 5;
+}
+
+// Request message for regenerating access token
+message RegenerateAccessTokenRequest {
+  string userId = 1;
+  string refreshToken = 2;
+  string deviceId = 3;  // optional
+}
+
+// Response message containing the new access token
+message RegenerateAccessTokenResponse {
+  string access_token = 1;
+}
+
+
+
+message LogoutRequest {
+  string userId = 1;
+  string deviceId = 2;
+}
+
+message LogoutResponse {
+  string message = 1;
+}
+
+message GoogleSignupRequest {
+  string token = 1;
+}
+
+message GoogleSignupResponse {
+  string userId = 1;
+  string email = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+}
+

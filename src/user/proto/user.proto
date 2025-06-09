@@ -7,6 +7,8 @@ service UserService {
 
   rpc Create(CreateUserRequest) returns (UserResponse) {}
 
+  rpc Login(CreateUserRequest) returns (UserToken) {}
+
   rpc FindAll(FindAllRequest) returns (UsersResponse) {}
 
   rpc Search(SearchRequest) returns (UsersResponse) {}
@@ -21,7 +23,7 @@ service UserService {
 
   rpc Remove(RemoveRequest) returns (Empty) {}
 
-  rpc Follow(FollowRequest) returns (UserResponse) {}
+  rpc FollowRequest(FollowRequest) returns (UserResponse) {}
 
   rpc Unfollow(UnfollowRequest) returns (UserResponse) {}
 
@@ -32,7 +34,11 @@ service UserService {
   rpc BlockUser(BlockUserRequest) returns (UserResponse) {}
 
   rpc UnblockUser(UnblockUserRequest) returns (UserResponse) {}
+
+  rpc ValidateUser(ValidateRequest) returns (ValidateResponse) {}
 }
+
+
 
 service AdminService {
   rpc BanUser(BanUserRequest) returns (UserResponse) {}
@@ -41,8 +47,18 @@ service AdminService {
 }
 
 
+message ValidateRequest{
+  string id =1;
+}
 
-message CreateUserRequest {
+message ValidateResponse{
+  bool message =1 ;
+}
+
+message UserToken{
+  string token =1;
+}
+message CreateUserRequest{
   string email = 1;
   string username = 2;
   string fullName = 3;
@@ -95,12 +111,10 @@ message UnfollowRequest {
 
 message GetFollowersRequest {
   string userId = 1;
-  int32 page = 2;
 }
 
 message GetFollowingRequest {
   string userId = 1;
-  int32 page = 2;
 }
 
 message BlockUserRequest {
@@ -113,16 +127,7 @@ message UnblockUserRequest {
   string userId = 2;
 }
 
-message UserResponse {
-  string id = 1;
-  string email = 2;
-  string username = 3;
-  string fullName = 4;
-  repeated string followers = 5;
-  repeated string following = 6;
-  repeated string blockedUsers = 7;
-  int32 followersCount = 8; 
-}
+
 
 message UsersResponse {
   repeated UserResponse users = 1;
@@ -160,9 +165,5 @@ message UserResponse {
 }
 
 
-message UsersResponse {
-  repeated UserResponse users = 1;
-  int32 totalCount = 2;
-}
 
 message Empty {}

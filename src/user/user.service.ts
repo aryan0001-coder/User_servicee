@@ -38,6 +38,8 @@ export class UserService {
         following: [],
       });
 
+      //after creating a new user this will call notification service through grpc
+
       return await newUser.save();
     } catch (error) {
       if (error.message.includes('email or username already exists')) {
@@ -68,6 +70,18 @@ export class UserService {
       return { users, totalCount };
     } catch (error) {
       throw new Error(`Failed to fetch users: ${error.message}`);
+    }
+  }
+
+  async validateUser(id: string): Promise<boolean> {
+    try {
+      const user = await this.userModel.findById(id);
+      if (!user) {
+        return false;
+      }
+      return true;
+    } catch (error) {
+      throw new Error(`Failed to fetch user: ${error.message}`);
     }
   }
 
