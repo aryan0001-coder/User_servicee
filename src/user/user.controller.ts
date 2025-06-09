@@ -18,19 +18,20 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { BlockUserDto } from './dto/block-user.dto';
 import { User } from './schemas/user.schema';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+//import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GrpcMethod } from '@nestjs/microservices';
 //import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
 @Controller('users')
-@ApiTags('users')
+//@ApiTags('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post()
-  @ApiOperation({
-    description: 'create a new user',
-  })
+  // @Post()
+  // @ApiOperation({
+  //   description: 'create a new user',
+  // })
+  @GrpcMethod('UserService', 'create')
   async create(@Body() createUserDto: CreateUserDto) {
     try {
       return await this.userService.create(createUserDto);
@@ -42,10 +43,11 @@ export class UserController {
     }
   }
 
-  @Get()
-  @ApiOperation({
-    description: 'get all users with pagination',
-  })
+  // @Get()
+  // @ApiOperation({
+  //   description: 'get all users with pagination',
+  // })
+  @GrpcMethod('UserService', 'findAll')
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
@@ -60,18 +62,20 @@ export class UserController {
     }
   }
 
-  @Get('search')
-  @ApiOperation({
-    description: 'search for users',
-  })
+  // @Get('search')
+  // @ApiOperation({
+  //   description: 'search for users',
+  // })
+  @GrpcMethod('UserService', 'search')
   async search(@Query() queryUserDto: QueryUserDto) {
     return this.userService.search(queryUserDto);
   }
 
-  @Get(':id')
-  @ApiOperation({
-    description: 'find a specific user with the id',
-  })
+  // @Get(':id')
+  // @ApiOperation({
+  //   description: 'find a specific user with the id',
+  // })
+  @GrpcMethod('UserService', 'findOne')
   async findOne(@Param('id') id: string) {
     try {
       const user = await this.userService.findOne(id);
@@ -88,10 +92,11 @@ export class UserController {
   }
 
   //@UseGuards(JwtAuthGuard)
-  @Patch(':id')
-  @ApiOperation({
-    description: 'update a user with the id',
-  })
+  // @Patch(':id')
+  // @ApiOperation({
+  //   description: 'update a user with the id',
+  // })
+  @GrpcMethod('UserService', 'update')
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     try {
       return await this.userService.update(id, updateUserDto);
@@ -104,10 +109,11 @@ export class UserController {
   }
 
   //@UseGuards(JwtAuthGuard)
-  @Delete(':id')
-  @ApiOperation({
-    description: 'delete a user with the id',
-  })
+  // @Delete(':id')
+  // @ApiOperation({
+  //   description: 'delete a user with the id',
+  // })
+  @GrpcMethod('UserService', 'remove')
   async remove(@Param('id') id: string) {
     try {
       await this.userService.remove(id);
@@ -121,10 +127,11 @@ export class UserController {
   }
 
   //@UseGuards(JwtAuthGuard)
-  @Post(':id/follow')
-  @ApiOperation({
-    description: 'follow a user with the id',
-  })
+  // @Post(':id/follow')
+  // @ApiOperation({
+  //   description: 'follow a user with the id',
+  // })
+  @GrpcMethod('UserService', 'follow')
   async follow(@Param('id') id: string, @Body('userId') userId: string) {
     try {
       return await this.userService.follow(id, userId);
@@ -137,10 +144,11 @@ export class UserController {
   }
 
   //@UseGuards(JwtAuthGuard)
-  @Delete(':id/follow')
-  @ApiOperation({
-    description: 'unfollow a user with the id',
-  })
+  // @Delete(':id/follow')
+  // @ApiOperation({
+  //   description: 'unfollow a user with the id',
+  // })
+  @GrpcMethod('UserService', 'unfollow')
   async unfollow(@Param('id') id: string, @Body('userId') userId: string) {
     try {
       return await this.userService.unfollow(id, userId);
@@ -152,10 +160,11 @@ export class UserController {
     }
   }
 
-  @Get(':id/followers')
-  @ApiOperation({
-    description: 'get followers of a user with the id',
-  })
+  // @Get(':id/followers')
+  // @ApiOperation({
+  //   description: 'get followers of a user with the id',
+  // })
+  @GrpcMethod('UserService', 'getFollowers')
   async getFollowers(
     @Param('id') id: string,
     @Query() queryUserDto: QueryUserDto,
@@ -170,10 +179,11 @@ export class UserController {
     }
   }
 
-  @Get(':id/following')
-  @ApiOperation({
-    description: 'get following of a user with the id',
-  })
+  // @Get(':id/following')
+  // @ApiOperation({
+  //   description: 'get following of a user with the id',
+  // })
+  @GrpcMethod('UserService', 'getFollowing')
   async getFollowing(
     @Param('id') id: string,
     @Query() queryUserDto: QueryUserDto,
@@ -187,10 +197,11 @@ export class UserController {
       );
     }
   }
-  @Post(':id/block')
-  @ApiOperation({
-    description: 'block a user with the id',
-  })
+  // @Post(':id/block')
+  // @ApiOperation({
+  //   description: 'block a user with the id',
+  // })
+  @GrpcMethod('UserService', 'blockUser')
   async blockUser(
     @Param('id') id: string,
     @Body()
@@ -198,10 +209,11 @@ export class UserController {
   ): Promise<User | null> {
     return this.userService.blockUser(id, blockUserDto);
   }
-  @Post(':id/unblock')
-  @ApiOperation({
-    description: 'unblock a user with the id',
-  })
+  // @Post(':id/unblock')
+  // @ApiOperation({
+  //   description: 'unblock a user with the id',
+  // })
+  @GrpcMethod('UserService', 'unblockUser')
   unblockUser(
     @Param('id') id: string,
     @Body()
