@@ -11,6 +11,7 @@ import {
   HttpStatus,
   HttpException,
   Put,
+  NotFoundException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -87,6 +88,20 @@ export class UserController {
       throw new HttpException(
         error.message || 'User not found',
         HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  @GrpcMethod('UserService', 'FindByUsername')
+  async FindByUsername(@Param('username') username: string): Promise<User> {
+    try {
+      return await this.userService.findByUsername(username);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new NotFoundException(
+        `Failed to fetch user by username: ${error.message}`,
       );
     }
   }
