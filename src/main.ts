@@ -5,24 +5,16 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { winstonConfig } from './common/logger/winston.logger';
 import { WinstonModule } from 'nest-winston';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-// import { Transport } from "@nestjs/microservices";
-// import { join } from "path";
+import path, { join } from 'path';
+// import { Transport } from '@nestjs/microservices';
+// import path, { join } from 'path';
+import * as dotenv from 'dotenv';
 
+dotenv.config();
 async function bootstrap() {
-  // const app = await NestFactory.create(AppModule, {
-  //   logger: WinstonModule.createLogger(winstonConfig),
-  // });
-
-  // // app.connectMicroservice({
-  // //   transport: Transport.GRPC,
-  // //   options: {
-  // //     package: "user",
-  // //     protoPath: join(__dirname, "proto/user.proto"),
-  // //     url: "0.0.0.0:50051",
-  // //   },
-  // // });
-
-  // // await app.startAllMicroservices();
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger(winstonConfig),
+  });
 
   // app.useGlobalPipes(
   //   new ValidationPipe({
@@ -47,18 +39,22 @@ async function bootstrap() {
   // SwaggerModule.setup('api', app, document);
   // await app.listen(process.env.port ?? 3011);
 
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppModule,
-    {
-      transport: Transport.GRPC,
-      options: {
-        protoPath: '/home/user/user-service/src/user/proto/user.proto',
-        url: '0.0.0.0:50051',
-        package: 'user',
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.GRPC,
+    options: {
+      package: 'user',
+      protoPath: '/home/user/user-service/src/user/proto/user.proto',
+      url: '0.0.0.0:50051',
+      loader: {
+        keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true,
       },
     },
-  );
-
-  app.listen();
+  });
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  await app.listen(process.env.port ?? 3011);
 }
 bootstrap();

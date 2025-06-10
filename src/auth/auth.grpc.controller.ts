@@ -1,16 +1,16 @@
+// src/auth/auth.grpc.controller.ts
 import {
   Body,
   Controller,
-  Post,
   HttpException,
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import { GrpcMethod } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from '../user/dto/create-user.dto';
-import { User } from '../user/schemas/user.schema';
+import { CreateUserDto } from 'src/user/dto/create-user.dto';
+import { User } from 'src/user/schemas/user.schema';
 import { LoginDto } from './dto/login.dto';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 interface LoginResponse {
   access_token: string;
@@ -21,43 +21,32 @@ interface LoginResponse {
   };
 }
 
+interface LogoutResponse {
+  success: boolean;
+  message: string;
+}
+
 interface LogoutRequest {
   userId: string;
   deviceId: string;
   token?: string; // Optional token for validation
 }
 
-interface LogoutResponse {
-  success: boolean;
-  message: string;
-}
-
-@Controller('auth')
-@ApiTags('auth')
-export class AuthController {
+@Controller()
+export class AuthGrpcController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
-  @ApiOperation({
-    description: 'register user with certain fields',
-  })
+  @GrpcMethod('AuthService', 'register')
   async register(@Body() createUserDto: CreateUserDto): Promise<User> {
     return this.authService.register(createUserDto);
   }
-
-  @Post('login')
-  @ApiOperation({
-    description: 'login user with email and password',
-  })
+  @GrpcMethod('AuthService', 'Login')
   async login(@Body() loginDto: LoginDto): Promise<LoginResponse> {
     console.log(loginDto);
     return this.authService.login(loginDto);
   }
 
-  @Post('logout')
-  @ApiOperation({
-    description: 'logout user with userId and deviceId',
-  })
+  @GrpcMethod('AuthService', 'logout')
   async logout(@Body() data: LogoutRequest): Promise<LogoutResponse> {
     try {
       return await this.authService.logout(

@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { HydratedDocument } from "mongoose";
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument } from 'mongoose';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -20,7 +20,7 @@ export class User {
   @Prop()
   bio: string;
 
-  @Prop({ default: "public" })
+  @Prop({ default: 'public' })
   accountType: string;
 
   @Prop()
@@ -32,16 +32,16 @@ export class User {
   @Prop({ default: 0 })
   followingCount: number;
 
-  @Prop({ type: [{ type: String, ref: "User" }] })
+  @Prop({ type: [{ type: String, ref: 'User' }] })
   followers: string[];
 
-  @Prop({ type: [{ type: String, ref: "User" }] })
+  @Prop({ type: [{ type: String, ref: 'User' }] })
   following: string[];
 
-  @Prop({ type: [{ type: String, ref: "Post" }] })
+  @Prop({ type: [{ type: String, ref: 'Post' }] })
   posts: string[];
 
-  @Prop({ type: [{ type: String, ref: "User" }], default: [] })
+  @Prop({ type: [{ type: String, ref: 'User' }], default: [] })
   blockedUsers: string[];
 
   @Prop({ default: false })
@@ -49,6 +49,21 @@ export class User {
 
   @Prop()
   banReason: string;
+
+  @Prop({ default: true })
+  isActive: boolean;
+
+  @Prop({ default: 'active' })
+  status: string;
+
+  @Prop({ default: false })
+  emailVerified: boolean;
+
+  @Prop({
+    type: [{ deviceId: String, token: String, lastActive: Date }],
+    default: [],
+  })
+  sessions: { deviceId: string; token: string; lastActive: Date }[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
