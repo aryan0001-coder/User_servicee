@@ -1,38 +1,40 @@
-import {
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { User, UserDocument } from '../user/schemas/user.schema';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from '../user/dto/create-user.dto';
-import { LoginDto } from './dto/login.dto';
+import * as bcrypt from 'bcrypt';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import { LoginDto } from './dto/login.dto';
+import { ClientGrpc } from '@nestjs/microservices';
+import { lastValueFrom, Observable } from 'rxjs';
+import { User } from 'src/user/schemas/user.schema';
 
-interface LoginResponse {
-  access_token: string;
-  user: {
-    id: any;
+interface AuthServiceClient {
+  GenerateToken(data: {
+    userId: string;
     email: string;
-    name: string;
-  };
+    role: string;
+    deviceId: string;
+    ipAddress: string;
+    userAgent: string;
+  }): Observable<TokenResponse>;
 }
-
-interface LogoutResponse {
-  success: boolean;
-  message: string;
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
 }
 
 @Injectable()
 export class AuthService {
+  private authService: AuthServiceClient;
   constructor(
-    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly usersService: UserService,
     private readonly jwtService: JwtService,
+    @Inject('AUTH_PACKAGE') private readonly client: ClientGrpc,
   ) {}
+
+  onModuleInit() {
+    this.authService = this.client.getService<AuthServiceClient>('AuthService');
+  }
 
   async register(createUserDto: CreateUserDto): Promise<User> {
     const existingUser = await this.usersService.findByEmail(
@@ -52,7 +54,7 @@ export class AuthService {
     return newUser;
   }
 
-  async login(loginDto: LoginDto): Promise<LoginResponse> {
+  async login(loginDto: LoginDto): Promise<TokenResponse> {
     const user = await this.usersService.findByEmail(loginDto.email);
 
     if (!user) {
@@ -65,116 +67,25 @@ export class AuthService {
       loginDto.password,
       user.password,
     );
+
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const payload = { email: user.email, sub: user.id };
-    const token = this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET || 'secret', // Use environment variable
-      expiresIn: '30d',
+    const UserId = user._id.toString();
+    console.log(UserId);
+    const token$ = this.authService.GenerateToken({
+      userId: UserId,
+      email: user.email,
+      role: 'user',
+      deviceId: 'test-device',
+      ipAddress: '127.0.0.1',
+      userAgent: 'PostmanRuntime/7.29.0',
     });
 
-    // Store session with deviceId
-    const deviceId = loginDto.deviceId || 'default-device'; // Assume deviceId is passed in LoginDto
-    await this.userModel.findByIdAndUpdate(
-      user.id,
-      {
-        $push: {
-          sessions: {
-            deviceId,
-            token,
-            lastActive: new Date(),
-          },
-        },
-      },
-      { new: true },
-    );
-
-    return {
-      access_token: token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.fullName || '',
-      },
-    };
-  }
-
-  async logout(
-    userId: string,
-    deviceId: string,
-    token?: string,
-  ): Promise<LogoutResponse> {
-    try {
-      if (!userId || !deviceId) {
-        throw new UnauthorizedException('userId and deviceId are required');
-      }
-
-      const user = await this.userModel.findById(userId).exec();
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
-
-      // Validate token if provided (to ensure genuine user)
-      if (token) {
-        try {
-          const payload = this.jwtService.verify(token, {
-            secret: process.env.JWT_SECRET || 'secret',
-          });
-          if (payload.sub !== userId) {
-            throw new UnauthorizedException('Invalid token for user');
-          }
-        } catch (error) {
-          throw new UnauthorizedException('Invalid or expired token');
-        }
-
-        // Check if session exists with matching token and deviceId
-        const session = user.sessions.find(
-          (s) => s.deviceId === deviceId && s.token === token,
-        );
-        if (!session) {
-          return {
-            success: false,
-            message: `No active session found for device ${deviceId} with provided token`,
-          };
-        }
-      } else {
-        // If no token is provided, check if session exists for deviceId
-        const sessionExists = user.sessions.some(
-          (s) => s.deviceId === deviceId,
-        );
-        if (!sessionExists) {
-          return {
-            success: false,
-            message: `No active session found for device ${deviceId}`,
-          };
-        }
-      }
-
-      // Remove session
-      await this.userModel.findByIdAndUpdate(
-        userId,
-        {
-          $pull: {
-            sessions: { deviceId },
-          },
-        },
-        { new: true },
-      );
-
-      return {
-        success: true,
-        message: 'Logout successful',
-      };
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof UnauthorizedException
-      ) {
-        throw error;
-      }
-      throw new Error(`Logout failed: ${error.message}`);
-    }
+    const tokens = await lastValueFrom(token$);
+    console.log(tokens);
+    return tokens;
   }
 }

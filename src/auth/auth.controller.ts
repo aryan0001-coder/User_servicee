@@ -1,35 +1,13 @@
-import {
-  Body,
-  Controller,
-  Post,
-  HttpException,
-  HttpStatus,
-  NotFoundException,
-} from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
-import { User } from '../user/schemas/user.schema';
 import { LoginDto } from './dto/login.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { User } from 'src/user/schemas/user.schema';
 
-interface LoginResponse {
+export interface TokenResponse {
   access_token: string;
-  user: {
-    id: any;
-    email: string;
-    name: string;
-  };
-}
-
-interface LogoutRequest {
-  userId: string;
-  deviceId: string;
-  token?: string; // Optional token for validation
-}
-
-interface LogoutResponse {
-  success: boolean;
-  message: string;
+  refresh_token: string;
 }
 
 @Controller('auth')
@@ -49,29 +27,8 @@ export class AuthController {
   @ApiOperation({
     description: 'login user with email and password',
   })
-  async login(@Body() loginDto: LoginDto): Promise<LoginResponse> {
+  async login(@Body() loginDto: LoginDto): Promise<TokenResponse> {
     console.log(loginDto);
     return this.authService.login(loginDto);
-  }
-
-  @Post('logout')
-  @ApiOperation({
-    description: 'logout user with userId and deviceId',
-  })
-  async logout(@Body() data: LogoutRequest): Promise<LogoutResponse> {
-    try {
-      return await this.authService.logout(
-        data.userId,
-        data.deviceId,
-        data.token,
-      );
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to logout',
-        error instanceof NotFoundException
-          ? HttpStatus.NOT_FOUND
-          : HttpStatus.BAD_REQUEST,
-      );
-    }
   }
 }

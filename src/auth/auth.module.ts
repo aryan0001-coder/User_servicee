@@ -6,9 +6,23 @@ import { UserModule } from '../user/user.module';
 import { UserService } from '../user/user.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { join } from 'path';
 
 @Module({
   imports: [
+    ClientsModule.register([
+      {
+        name: 'AUTH_PACKAGE',
+        transport: Transport.GRPC,
+        options: {
+          package: 'auth',
+          protoPath: join(process.cwd(), 'src/user/proto/auth.proto'),
+          url: 'localhost:50052',
+        },
+      },
+    ]),
+
     forwardRef(() => UserModule),
     ConfigModule,
     JwtModule.registerAsync({
