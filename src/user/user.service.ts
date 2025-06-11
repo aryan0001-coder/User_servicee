@@ -12,12 +12,36 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User, UserDocument } from './schemas/user.schema';
 import { QueryUserDto } from './dto/query-user.dto';
 import { BlockUserDto } from './dto/block-user.dto';
+import { BanUserDto } from './dto/ban-user.dto';
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { ConfigService } from '@nestjs/config';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { AwsCredentialIdentity } from '@aws-sdk/types';
 
 @Injectable()
 export class UserService {
+  private readonly s3Client: S3Client;
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY');
+    const secretAccessKey = this.configService.get<string>('AWS_SECRET_KEY');
+
+    if (!accessKeyId || !secretAccessKey) {
+      throw new Error('AWS credentials are not properly configured');
+    }
+
+    const credentials: AwsCredentialIdentity = {
+      accessKeyId,
+      secretAccessKey,
+    };
+
+    this.s3Client = new S3Client({
+      region: this.configService.get('AWS_REGION'),
+      credentials,
+    });
+  }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     try {
@@ -73,13 +97,20 @@ export class UserService {
     }
   }
 
-  async validateUser(id: string): Promise<boolean> {
+  async validateUser(
+    id: string,
+  ): Promise<{ isValid: boolean; isBanned?: boolean }> {
     try {
       const user = await this.userModel.findById(id);
       if (!user) {
-        return false;
+        return { isValid: false };
       }
-      return true;
+
+      // Return both validation and banned status
+      return {
+        isValid: true,
+        isBanned: user.isBanned,
+      };
     } catch (error) {
       throw new Error(`Failed to fetch user: ${error.message}`);
     }
@@ -227,7 +258,6 @@ export class UserService {
             userId,
             {
               $addToSet: { following: targetId },
-              $push: { followers: userId },
             },
             { new: true, session },
           )
@@ -278,6 +308,7 @@ export class UserService {
 
       await this.userModel.findByIdAndUpdate(targetId, {
         $pull: { followers: userId },
+        $inc: { followersCount: -1 },
       });
 
       return user;
@@ -414,6 +445,95 @@ export class UserService {
         throw error;
       }
       throw new Error(`Unblock user failed: ${error.message}`);
+    }
+  }
+
+  async banUser(userId: string, banUserDto: BanUserDto): Promise<User> {
+    const user = await this.userModel.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          isBanned: true,
+          banReason: banUserDto.reason,
+        },
+      },
+      { new: true },
+    );
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  async unbanUser(userId: string): Promise<User> {
+    const user = await this.userModel.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          isBanned: false,
+          banReason: null,
+        },
+      },
+      { new: true },
+    );
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  async getBannedUsers(): Promise<User[]> {
+    return this.userModel.find({ isBanned: true }).exec();
+  }
+  async generatePresignedUrl(
+    userId: string,
+    fileType: string,
+  ): Promise<{ url: string; key: string }> {
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(fileType)) {
+      throw new BadRequestException(
+        'Invalid file type. Supported types: jpeg, png, gif',
+      );
+    }
+
+    const fileExtension = fileType.split('/')[1];
+    const key = `user-uploads/profile-pictures/${userId}-${Date.now()}.${fileExtension}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.configService.get('AWS_S3_BUCKET_NAME'),
+      Key: key,
+      ContentType: fileType,
+      ACL: 'public-read', // Adjust to 'private' if access control is needed
+    });
+
+    try {
+      const url = await getSignedUrl(this.s3Client, command, {
+        expiresIn: 3600,
+      }); // 1-hour expiry
+      return { url, key };
+    } catch (error) {
+      throw new BadRequestException('Failed to generate presigned URL');
+    }
+  }
+
+  async updateProfilePicture(userId: string, imageKey: string): Promise<User> {
+    const imageUrl = `https://${this.configService.get('AWS_S3_BUCKET_NAME')}.s3.amazonaws.com/${imageKey}`;
+
+    try {
+      const updatedUser = await this.userModel.findByIdAndUpdate(
+        userId,
+        { profilePicture: imageUrl },
+        { new: true, runValidators: true },
+      );
+      if (!updatedUser) {
+        throw new BadRequestException('User not found');
+      }
+      return updatedUser;
+    } catch (error) {
+      throw new BadRequestException('Failed to update profile picture');
     }
   }
 }

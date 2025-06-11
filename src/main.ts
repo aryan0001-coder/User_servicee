@@ -43,7 +43,7 @@ async function bootstrap() {
     transport: Transport.GRPC,
     options: {
       package: 'user',
-      protoPath: '/home/user/user-service/src/user/proto/user.proto',
+      protoPath: 'src/user/proto/user.proto',
       url: '0.0.0.0:50051',
       loader: {
         keepCase: true,

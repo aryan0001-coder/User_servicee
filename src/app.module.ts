@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { join } from 'path';
+import { MailerModule } from './mailer/mailer.module';
 
 @Module({
   imports: [
@@ -22,12 +23,13 @@ import { join } from 'path';
         transport: Transport.GRPC,
         options: {
           package: 'auth',
-          protoPath: join('/home/user/user-service/src/user/proto/auth.proto'),
+          protoPath: 'src/user/proto/auth.proto',
           url: '0.0.0.0:50051',
         },
       },
     ]),
     UserModule,
+    MailerModule,
     AuthModule,
   ],
 })

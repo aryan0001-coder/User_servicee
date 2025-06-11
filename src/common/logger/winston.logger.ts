@@ -6,7 +6,7 @@ export const winstonConfig = {
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.timestamp(),
-        nestWinstonModuleUtilities.format.nestLike('PostService', {
+        nestWinstonModuleUtilities.format.nestLike('UserService', {
           prettyPrint: true,
         }),
       ),

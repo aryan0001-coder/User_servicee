@@ -7,6 +7,7 @@ import { LoginDto } from './dto/login.dto';
 import { ClientGrpc } from '@nestjs/microservices';
 import { lastValueFrom, Observable } from 'rxjs';
 import { User } from 'src/user/schemas/user.schema';
+import { MailerService } from 'src/mailer/mailer.service';
 
 interface AuthServiceClient {
   GenerateToken(data: {
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly usersService: UserService,
     private readonly jwtService: JwtService,
     @Inject('AUTH_PACKAGE') private readonly client: ClientGrpc,
+    private readonly mailerService: MailerService,
   ) {}
 
   onModuleInit() {
@@ -51,6 +53,12 @@ export class AuthService {
       password: hashedPassword,
     });
 
+    await this.mailerService.sendWelcomeEmailWithAttachment(
+      newUser.email,
+      newUser.username,
+      '/path/to/Holiday_calendar1.pdf',
+    );
+
     return newUser;
   }
 
@@ -60,6 +68,14 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException(
         'User does not exist. Please register first.',
+      );
+    }
+
+    if (user.isBanned) {
+      throw new UnauthorizedException(
+        user.banReason
+          ? `Your account has been banned: ${user.banReason}`
+          : 'Your account has been suspended. Please contact support.',
       );
     }
 

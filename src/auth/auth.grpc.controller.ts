@@ -24,4 +24,15 @@ export class AuthGrpcController {
     console.log(data);
     return this.authService.login(data);
   }
+
+  @GrpcMethod('AuthService', 'GenerateToken')
+  async generateToken(data: any): Promise<TokenResponse> {
+    // Implement token generation logic or call AuthService method
+    // For example, you can call a method in AuthService to generate token
+    // Here, assuming login method can be reused or create a new method in AuthService
+    // Adjust as per your AuthService implementation
+
+    // Example placeholder implementation:
+    return this.authService.login(data);
+  }
 }
