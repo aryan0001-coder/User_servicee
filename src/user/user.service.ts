@@ -323,7 +323,7 @@ export class UserService {
   async getFollowers(
     userId: string,
     page = 1,
-  ): Promise<{ users: User[]; totalCount: number }> {
+  ): Promise<{ users: { _id: string }[]; totalCount: number }> {
     try {
       const limit = 10;
       const skip = (page - 1) * limit;
@@ -335,13 +335,16 @@ export class UserService {
 
       const followers = await this.userModel
         .find({ _id: { $in: user.followers } })
-        .select('-password')
+        .select('_id') // Only select the _id field
         .skip(skip)
         .limit(limit);
 
       const totalCount = user.followers.length;
 
-      return { users: followers, totalCount };
+      return {
+        users: followers.map((f) => ({ _id: f._id.toString.toString() })), // Explicitly return only _id
+        totalCount,
+      };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -353,7 +356,7 @@ export class UserService {
   async getFollowing(
     userId: string,
     page = 1,
-  ): Promise<{ users: User[]; totalCount: number }> {
+  ): Promise<{ users: { _id: string }[]; totalCount: number }> {
     try {
       const limit = 10;
       const skip = (page - 1) * limit;
@@ -365,13 +368,17 @@ export class UserService {
 
       const following = await this.userModel
         .find({ _id: { $in: user.following } })
-        .select('-password')
+        .select('_id')
+        .lean()
         .skip(skip)
         .limit(limit);
 
       const totalCount = user.following.length;
 
-      return { users: following, totalCount };
+      return {
+        users: following.map((user) => ({ _id: user._id.toString() })), // Convert ObjectId to string
+        totalCount,
+      };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

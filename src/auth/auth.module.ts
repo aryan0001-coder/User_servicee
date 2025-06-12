@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 import { MailerModule } from 'src/mailer/mailer.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { MailerModule } from 'src/mailer/mailer.module';
     forwardRef(() => UserModule),
     ConfigModule,
     MailerModule,
+    RedisModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
