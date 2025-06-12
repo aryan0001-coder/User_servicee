@@ -17,6 +17,7 @@ message TokenPayload {
   string deviceId = 4;
   string ipAddress = 5;
   string userAgent = 6;
+   string fcmToken = 7;
 }
 
 message TokenResponse {

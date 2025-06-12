@@ -19,6 +19,7 @@ interface AuthServiceClient {
     deviceId: string;
     ipAddress: string;
     userAgent: string;
+    fcmToken?: string;
   }): Observable<TokenResponse>;
 }
 export interface TokenResponse {
@@ -111,18 +112,71 @@ export class AuthService {
     if (!user) {
       return { success: false, message: 'User not found' };
     }
-    console.log(newPassword);
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    console.log(`Resetting password for user ${user._id.toString()}`);
-    user.password = hashedPassword;
-    user.save();
-
-    console.log(`Password updated for user ${user._id.toString()}`);
+    await this.usersService.update(user._id.toString(), {
+      password: hashedPassword,
+    });
 
     await this.redisService.del(`reset-password-otp:${email}`);
 
     return { success: true, message: 'Password reset successfully' };
+  }
+
+  async login(loginDto: LoginDto): Promise<TokenResponse> {
+    console.log(`Login attempt for email: ${loginDto.email}`);
+
+    const ftoken = loginDto.fcmToken;
+    if (ftoken) {
+      console.log(`Received FCM token: ${loginDto.fcmToken}`);
+      // Optionally store or update the FCM token for the user here
+      // For example, update user record or store in Redis
+    }
+    const user = await this.usersService.findByEmail(loginDto.email);
+
+    if (!user) {
+      console.log('User does not exist');
+      throw new UnauthorizedException(
+        'User does not exist. Please register first.',
+      );
+    }
+
+    if (user.isBanned) {
+      console.log('User is banned');
+      throw new UnauthorizedException(
+        user.banReason
+          ? `Your account has been banned: ${user.banReason}`
+          : 'Your account has been suspended. Please contact support.',
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      console.log('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload = { email: user.email, sub: user.id };
+    const UserId = user._id.toString();
+    console.log(`User ID: ${UserId}`);
+    const token$ = this.authService.GenerateToken({
+      userId: UserId,
+      email: user.email,
+      role: 'user',
+      deviceId: 'test-device',
+      ipAddress: '127.0.0.1',
+      userAgent: 'PostmanRuntime/7.29.0',
+      fcmToken: ftoken,
+    });
+
+    const tokens = await lastValueFrom(token$);
+    console.log('Tokens generated');
+    return tokens;
   }
 
   async verifyOtp(
@@ -164,46 +218,23 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto): Promise<TokenResponse> {
-    const user = await this.usersService.findByEmail(loginDto.email);
-
-    if (!user) {
-      throw new UnauthorizedException(
-        'User does not exist. Please register first.',
-      );
+  async logout(
+    refreshToken: string,
+  ): Promise<{ success: boolean; message: string }> {
+    if (!refreshToken) {
+      return { success: false, message: 'Invalid token' };
     }
 
-    if (user.isBanned) {
-      throw new UnauthorizedException(
-        user.banReason
-          ? `Your account has been banned: ${user.banReason}`
-          : 'Your account has been suspended. Please contact support.',
-      );
-    }
+    // Store the refresh token in Redis blacklist with expiration (e.g., 7 days)
+    const BLACKLIST_PREFIX = 'blacklist:refresh-token:';
+    const EXPIRATION_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.password,
+    await this.redisService.set(
+      `${BLACKLIST_PREFIX}${refreshToken}`,
+      'true',
+      EXPIRATION_SECONDS,
     );
 
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const payload = { email: user.email, sub: user.id };
-    const UserId = user._id.toString();
-    console.log(UserId);
-    const token$ = this.authService.GenerateToken({
-      userId: UserId,
-      email: user.email,
-      role: 'user',
-      deviceId: 'test-device',
-      ipAddress: '127.0.0.1',
-      userAgent: 'PostmanRuntime/7.29.0',
-    });
-
-    const tokens = await lastValueFrom(token$);
-    console.log(tokens);
-    return tokens;
+    return { success: true, message: 'Logout successful' };
   }
 }

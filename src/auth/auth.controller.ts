@@ -7,6 +7,7 @@ import { User } from 'src/user/schemas/user.schema';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { LogoutDto } from './dto/logout.dto';
 
 export interface TokenResponse {
   access_token: string;
@@ -109,5 +110,30 @@ export class AuthController {
     @Body() resetPasswordDto: ResetPasswordDto,
   ): Promise<{ success: boolean; message: string }> {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Post('logout')
+  @ApiOperation({
+    summary: 'Logout user by invalidating refresh token',
+    description: 'Invalidates the refresh token to logout the user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Logout successful',
+    schema: {
+      example: { success: true, message: 'Logout successful' },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request',
+    schema: {
+      example: { success: false, message: 'Invalid token' },
+    },
+  })
+  async logout(
+    @Body() logoutDto: LogoutDto,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.authService.logout(logoutDto.refreshToken);
   }
 }

@@ -15,4 +15,11 @@ export class LoginDto {
   @IsNotEmpty()
   @MinLength(6)
   password: string;
+
+  @ApiProperty({
+    description: 'FCM token for push notifications',
+    example: 'fcm_token_example_123456',
+    required: false,
+  })
+  fcmToken?: string;
 }
