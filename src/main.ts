@@ -35,6 +35,11 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+  // app.enableCors({
+  //   origin: '*',
+  //   methods: 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS',
+  //   credentials: true,
+  // });
 
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
@@ -52,6 +57,7 @@ async function bootstrap() {
     },
   });
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  app.enableCors();
   await app.listen(process.env.port ?? 3011);
 }
 bootstrap();

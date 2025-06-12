@@ -35,7 +35,7 @@ import { ConfirmUploadDto } from './dto/confirm-upload.dto';
 @Controller('users')
 @ApiTags('users')
 @ApiBearerAuth()
-//@UseGuards(GrpcAuthGuard)
+@UseGuards(GrpcAuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -369,12 +369,12 @@ export class UserController {
     @Body() banUserDto: BanUserDto,
     @Req() req,
   ) {
-    // if (req.user.role !== 'admin') {
-    //   throw new HttpException(
-    //     'Only admins can ban users',
-    //     HttpStatus.FORBIDDEN,
-    //   );
-    // }
+    if (req.user.role !== 'admin') {
+      throw new HttpException(
+        'Only admins can ban users',
+        HttpStatus.FORBIDDEN,
+      );
+    }
 
     try {
       return await this.userService.banUser(id, banUserDto);

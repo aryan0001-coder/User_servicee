@@ -69,6 +69,62 @@ export class AuthService {
     return { success: true, message: 'OTP sent to email' };
   }
 
+  async forgotPassword(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      return { success: false, message: 'User with this email does not exist' };
+    }
+
+    const otp = await this.mailerService.sendOTP(email);
+
+    await this.redisService.set(
+      `reset-password-otp:${email}`,
+      otp,
+      this.OTP_TTL_SECONDS,
+    );
+
+    return { success: true, message: 'OTP sent to email for password reset' };
+  }
+
+  async resetPassword(resetPasswordDto: {
+    email: string;
+    otp: string;
+    newPassword: string;
+  }): Promise<{ success: boolean; message: string }> {
+    const { email, otp, newPassword } = resetPasswordDto;
+
+    const storedOtp = await this.redisService.get(
+      `reset-password-otp:${email}`,
+    );
+
+    if (!storedOtp) {
+      return { success: false, message: 'OTP expired or not found' };
+    }
+
+    if (storedOtp !== otp) {
+      return { success: false, message: 'Invalid OTP' };
+    }
+
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      return { success: false, message: 'User not found' };
+    }
+    console.log(newPassword);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    console.log(`Resetting password for user ${user._id.toString()}`);
+    user.password = hashedPassword;
+    user.save();
+
+    console.log(`Password updated for user ${user._id.toString()}`);
+
+    await this.redisService.del(`reset-password-otp:${email}`);
+
+    return { success: true, message: 'Password reset successfully' };
+  }
+
   async verifyOtp(
     verifyOtpDto: VerifyOtpDto,
   ): Promise<{ success: boolean; message: string }> {

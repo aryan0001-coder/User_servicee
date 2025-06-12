@@ -5,6 +5,8 @@ import { LoginDto } from './dto/login.dto';
 import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { User } from 'src/user/schemas/user.schema';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 export interface TokenResponse {
   access_token: string;
@@ -49,5 +51,63 @@ export class AuthController {
     @Body() verifyOtpDto: VerifyOtpDto,
   ): Promise<{ success: boolean; message: string }> {
     return this.authService.verifyOtp(verifyOtpDto);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({
+    summary: 'Send OTP to user email for password reset',
+    description:
+      'Sends a one-time password (OTP) to the user email for password reset',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully',
+    schema: {
+      example: {
+        success: true,
+        message: 'OTP sent to email for password reset',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request',
+    schema: {
+      example: {
+        success: false,
+        message: 'User with this email does not exist',
+      },
+    },
+  })
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({
+    summary: 'Reset user password using OTP',
+    description:
+      'Resets the user password after validating the OTP sent to email',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully',
+    schema: {
+      example: { success: true, message: 'Password reset successfully' },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request',
+    schema: {
+      example: { success: false, message: 'Invalid OTP' },
+    },
+  })
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 }
