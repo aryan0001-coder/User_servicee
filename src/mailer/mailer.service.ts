@@ -5,10 +5,11 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class MailerService {
-  private transporter: nodemailer.Transporter;
-  private otpStorage: Map<string, { otp: string; expiresAt: Date }> = new Map();
+  private readonly transporter: nodemailer.Transporter;
+  private readonly otpStorage: Map<string, { otp: string; expiresAt: Date }> =
+    new Map();
 
-  constructor(private configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -20,9 +21,9 @@ export class MailerService {
 
   // Generate and send OTP
   async sendOTP(email: string): Promise<string> {
-    const otp = crypto.randomInt(100000, 999999).toString(); // 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10); // OTP valid for 10 minutes
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
     this.otpStorage.set(email, { otp, expiresAt });
 
@@ -39,14 +40,13 @@ export class MailerService {
 
     try {
       await this.transporter.sendMail(mailOptions);
-      return otp; // For testing purposes, in production you might not want to return this
+      return otp;
     } catch (error) {
       console.error('Error sending OTP email:', error);
       throw error;
     }
   }
 
-  // Verify OTP
   verifyOTP(email: string, userOTP: string): boolean {
     const storedOTP = this.otpStorage.get(email);
 
@@ -54,7 +54,6 @@ export class MailerService {
       return false;
     }
 
-    // Check if OTP matches and isn't expired
     if (storedOTP.otp === userOTP && storedOTP.expiresAt > new Date()) {
       this.otpStorage.delete(email); // Remove used OTP
       return true;
@@ -63,7 +62,6 @@ export class MailerService {
     return false;
   }
 
-  // Send welcome email (only after OTP verification)
   async sendWelcomeEmailWithAttachment(
     email: string,
     name: string,
@@ -72,20 +70,40 @@ export class MailerService {
     const mailOptions = {
       from: this.configService.get('MAIL_FROM'),
       to: email,
-      subject: 'Welcome to the Email Notification System',
+      subject: 'Welcome to our Social Media Platform!',
       text:
         `Hi ${name},\n\n` +
-        'Welcome to our Notification System!\n\n' +
-        'This is a test email to verify that your Nodemailer setup is working correctly.\n\n' +
-        'Please find the attached Holiday Calendar for reference.\n\n' +
+        'Welcome to our Social Media Platform!\n\n' +
+        'You have been sucessfully registered with our platform.\n\n' +
         'Best Regards,\n' +
-        'Aryan',
+        'Social Media Team',
       attachments: [
         {
           filename: 'Holiday_Calendar.pdf',
           path: attachmentPath,
         },
       ],
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error('Error sending welcome email:', error);
+      throw error;
+    }
+  }
+
+  async sendWelcomeEmail(email: string, name: string): Promise<void> {
+    const mailOptions = {
+      from: this.configService.get('MAIL_FROM'),
+      to: email,
+      subject: 'Welcome to our Social Media Platform!',
+      text:
+        `Hi ${name},\n\n` +
+        'Welcome to our Social Media Platform!\n\n' +
+        'You have been sucessfully registered with our platform.\n\n' +
+        'Best Regards,\n' +
+        'Social Media Team',
     };
 
     try {

@@ -21,7 +21,12 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { BlockUserDto } from './dto/block-user.dto';
 import { User } from './schemas/user.schema';
-import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiTags,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { GrpcAuthGuard } from '../guards/grpc-auth.guard';
 import { BanUserDto } from './dto/ban-user.dto';
 import { GenerateUploadUrlDto } from './dto/generate-upload-url.dto';
@@ -34,24 +39,13 @@ import { ConfirmUploadDto } from './dto/confirm-upload.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post()
-  @ApiOperation({
-    description: 'create a new user',
-  })
-  async create(@Body() createUserDto: CreateUserDto) {
-    try {
-      return await this.userService.create(createUserDto);
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to create user',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  }
-
   @Get()
   @ApiOperation({
     description: 'get all users with pagination',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of users retrieved successfully.',
   })
   async findAll(
     @Query('page') page: number = 1,
@@ -71,6 +65,7 @@ export class UserController {
   @ApiOperation({
     description: 'search for users',
   })
+  @ApiResponse({ status: 200, description: 'Users search results.' })
   async search(@Query() queryUserDto: QueryUserDto) {
     return this.userService.search(queryUserDto);
   }
@@ -79,6 +74,8 @@ export class UserController {
   @ApiOperation({
     description: 'get current user profile',
   })
+  @ApiResponse({ status: 200, description: 'Current user profile retrieved.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   async getCurrentUser(@Req() req) {
     try {
       const userId = req.user.userId;
@@ -99,6 +96,8 @@ export class UserController {
   @ApiOperation({
     description: 'find a specific user with the id',
   })
+  @ApiResponse({ status: 200, description: 'User found by id.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   async findOne(@Param('id') id: string) {
     try {
       const user = await this.userService.findOne(id);
@@ -118,6 +117,8 @@ export class UserController {
   @ApiOperation({
     description: 'find a specific user with the username',
   })
+  @ApiResponse({ status: 200, description: 'User found by username.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   async FindByUsername(@Param('username') username: string): Promise<User> {
     try {
       return await this.userService.findByUsername(username);
@@ -135,6 +136,8 @@ export class UserController {
   @ApiOperation({
     description: 'update current user profile',
   })
+  @ApiResponse({ status: 200, description: 'Current user profile updated.' })
+  @ApiResponse({ status: 400, description: 'Failed to update user.' })
   async updateCurrentUser(@Body() updateUserDto: UpdateUserDto, @Req() req) {
     try {
       const userId = req.user.userId;
@@ -151,6 +154,8 @@ export class UserController {
   @ApiOperation({
     description: 'update a user with the id (admin only)',
   })
+  @ApiResponse({ status: 200, description: 'User updated by admin.' })
+  @ApiResponse({ status: 400, description: 'Failed to update user.' })
   async updateUser(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -174,6 +179,8 @@ export class UserController {
   @ApiOperation({
     description: 'delete current user account',
   })
+  @ApiResponse({ status: 200, description: 'Current user account deleted.' })
+  @ApiResponse({ status: 400, description: 'Failed to delete user.' })
   async removeCurrentUser(@Req() req) {
     try {
       const userId = req.user.userId;
@@ -191,6 +198,8 @@ export class UserController {
   @ApiOperation({
     description: 'delete a user with the id (admin only)',
   })
+  @ApiResponse({ status: 200, description: 'User deleted by admin.' })
+  @ApiResponse({ status: 400, description: 'Failed to delete user.' })
   async removeUser(@Param('id') id: string, @Req() req) {
     try {
       if (req.user.role !== 'admin') {
@@ -210,6 +219,7 @@ export class UserController {
   @ApiOperation({
     description: 'follow a user with the id',
   })
+  @ApiResponse({ status: 200, description: 'User followed successfully.' })
   async follow(@Param('id') id: string, @Req() req) {
     try {
       const loggedInUserId = req.user.userId;
@@ -226,6 +236,7 @@ export class UserController {
   @ApiOperation({
     description: 'unfollow a user with the id',
   })
+  @ApiResponse({ status: 200, description: 'User unfollowed successfully.' })
   async unfollow(@Param('id') id: string, @Req() req) {
     try {
       const loggedInUserId = req.user.userId;
@@ -241,6 +252,10 @@ export class UserController {
   @Get('me/followers')
   @ApiOperation({
     description: 'get current user followers',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user followers retrieved.',
   })
   async getCurrentUserFollowers(
     @Req() req,
@@ -261,6 +276,10 @@ export class UserController {
   @ApiOperation({
     description: 'get current user following',
   })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user following retrieved.',
+  })
   async getCurrentUserFollowing(
     @Req() req,
     @Query() queryUserDto: QueryUserDto,
@@ -280,6 +299,7 @@ export class UserController {
   @ApiOperation({
     description: 'get followers of a user with the id',
   })
+  @ApiResponse({ status: 200, description: 'Followers of user retrieved.' })
   async getFollowers(
     @Param('id') id: string,
     @Query() queryUserDto: QueryUserDto,
@@ -298,6 +318,7 @@ export class UserController {
   @ApiOperation({
     description: 'get following of a user with the id',
   })
+  @ApiResponse({ status: 200, description: 'Following of user retrieved.' })
   async getFollowing(
     @Param('id') id: string,
     @Query() queryUserDto: QueryUserDto,
@@ -316,6 +337,7 @@ export class UserController {
   @ApiOperation({
     description: 'block a user with the id',
   })
+  @ApiResponse({ status: 200, description: 'User blocked successfully.' })
   async blockUser(@Param('id') id: string, @Req() req): Promise<User | null> {
     const blockUserDto: BlockUserDto = {
       userId: id,
@@ -329,6 +351,7 @@ export class UserController {
   @ApiOperation({
     description: 'unblock a user with the id',
   })
+  @ApiResponse({ status: 200, description: 'User unblocked successfully.' })
   async unblockUser(@Param('id') id: string, @Req() req): Promise<User | null> {
     const blockUserDto: BlockUserDto = {
       userId: id,
@@ -340,6 +363,7 @@ export class UserController {
 
   @Post(':id/ban')
   @ApiOperation({ summary: 'Ban a user' })
+  @ApiResponse({ status: 200, description: 'User banned successfully.' })
   async banUser(
     @Param('id') id: string,
     @Body() banUserDto: BanUserDto,
@@ -364,6 +388,7 @@ export class UserController {
 
   @Delete(':id/unban')
   @ApiOperation({ summary: 'Unban a user' })
+  @ApiResponse({ status: 200, description: 'User unbanned successfully.' })
   async unbanUser(@Param('id') id: string, @Req() req) {
     if (req.user.role !== 'admin') {
       throw new HttpException(
@@ -384,6 +409,7 @@ export class UserController {
 
   @Get('banned')
   @ApiOperation({ summary: 'Get all banned users' })
+  @ApiResponse({ status: 200, description: 'List of banned users retrieved.' })
   async getBannedUsers(@Req() req) {
     if (req.user.role !== 'admin') {
       throw new HttpException(
@@ -398,7 +424,8 @@ export class UserController {
   @ApiOperation({
     description: 'validate current user',
   })
-  validateCurrentUser(@Req() req) {
+  @ApiResponse({ status: 200, description: 'Current user validated.' })
+  async validateCurrentUser(@Req() req) {
     return this.userService.validateUser(req.user.userId);
   }
 
@@ -406,7 +433,8 @@ export class UserController {
   @ApiOperation({
     description: 'validate a user with the id (admin only)',
   })
-  validateUser(@Param('id') id: string, @Req() req) {
+  @ApiResponse({ status: 200, description: 'User validated by admin.' })
+  async validateUser(@Param('id') id: string, @Req() req) {
     if (req.user.role !== 'admin') {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
@@ -417,6 +445,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Generate presigned URL for profile picture upload',
   })
+  @ApiResponse({ status: 200, description: 'Presigned URL generated.' })
   async generateUploadUrl(
     @Param('id') userId: string,
     @Body() generateUploadUrlDto: GenerateUploadUrlDto,
@@ -433,6 +462,7 @@ export class UserController {
 
   @Put(':id/profile-picture/confirm')
   @ApiOperation({ summary: 'Confirm profile picture upload and update user' })
+  @ApiResponse({ status: 200, description: 'Profile picture updated.' })
   async confirmProfilePicture(
     @Param('id') userId: string,
     @Body() confirmUploadDto: ConfirmUploadDto,

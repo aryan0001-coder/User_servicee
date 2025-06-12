@@ -15,7 +15,9 @@ export class AuthGrpcController {
   constructor(private readonly authService: AuthService) {}
 
   @GrpcMethod('AuthService', 'Register')
-  async register(data: CreateUserDto): Promise<User> {
+  async register(
+    data: CreateUserDto,
+  ): Promise<{ success: boolean; message: string }> {
     return this.authService.register(data);
   }
 

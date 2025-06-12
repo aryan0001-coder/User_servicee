@@ -62,8 +62,6 @@ export class UserService {
         following: [],
       });
 
-      //after creating a new user this will call notification service through grpc
-
       return await newUser.save();
     } catch (error) {
       if (error.message.includes('email or username already exists')) {

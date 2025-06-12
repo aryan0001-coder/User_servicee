@@ -29,7 +29,7 @@ export interface TokenResponse {
 @Injectable()
 export class AuthService {
   private authService: AuthServiceClient;
-  private readonly OTP_TTL_SECONDS = 300; // 5 minutes
+  private readonly OTP_TTL_SECONDS = 300;
 
   constructor(
     private readonly usersService: UserService,
@@ -43,7 +43,9 @@ export class AuthService {
     this.authService = this.client.getService<AuthServiceClient>('AuthService');
   }
 
-  async register(createUserDto: CreateUserDto): Promise<User> {
+  async register(
+    createUserDto: CreateUserDto,
+  ): Promise<{ success: boolean; message: string }> {
     const existingUser = await this.usersService.findByEmail(
       createUserDto.email,
     );
@@ -51,24 +53,20 @@ export class AuthService {
       throw new UnauthorizedException('Email already in use');
     }
 
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const otp = await this.mailerService.sendOTP(createUserDto.email);
 
-    const newUser = await this.usersService.create({
-      ...createUserDto,
-      password: hashedPassword,
-    });
-
-    // Generate and send OTP
-    const otp = await this.mailerService.sendOTP(newUser.email);
-
-    // Store OTP in Redis with expiration
     await this.redisService.set(
-      `otp:${newUser.email}`,
+      `otp:${createUserDto.email}`,
       otp,
       this.OTP_TTL_SECONDS,
     );
+    await this.redisService.set(
+      `user:${createUserDto.email}`,
+      JSON.stringify(createUserDto),
+      this.OTP_TTL_SECONDS,
+    );
 
-    return newUser;
+    return { success: true, message: 'OTP sent to email' };
   }
 
   async verifyOtp(
@@ -86,22 +84,28 @@ export class AuthService {
       return { success: false, message: 'Invalid OTP' };
     }
 
-    // OTP is valid, delete it from Redis
     await this.redisService.del(`otp:${email}`);
 
-    // Send welcome email
-    const user = await this.usersService.findByEmail(email);
-    if (!user) {
-      return { success: false, message: 'User not found' };
+    const userDataString = await this.redisService.get(`user:${email}`);
+    if (!userDataString) {
+      return { success: false, message: 'User data expired or not found' };
     }
+    const userData = JSON.parse(userDataString);
 
-    await this.mailerService.sendWelcomeEmailWithAttachment(
-      user.email,
-      user.username,
-      '/path/to/Holiday_calendar1.pdf',
-    );
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    const newUser = await this.usersService.create({
+      ...userData,
+      password: hashedPassword,
+    });
 
-    return { success: true, message: 'OTP verified and welcome email sent' };
+    await this.redisService.del(`user:${email}`);
+
+    await this.mailerService.sendWelcomeEmail(newUser.email, newUser.username);
+
+    return {
+      success: true,
+      message: 'OTP verified and user registered with welcome email sent',
+    };
   }
 
   async login(loginDto: LoginDto): Promise<TokenResponse> {

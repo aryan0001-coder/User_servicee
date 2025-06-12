@@ -27,18 +27,6 @@ import { GrpcMethod } from '@nestjs/microservices';
 export class UserGrpcController {
   constructor(private readonly userService: UserService) {}
 
-  @GrpcMethod('UserService', 'create')
-  async create(@Body() createUserDto: CreateUserDto) {
-    try {
-      return await this.userService.create(createUserDto);
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to create user',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  }
-
   @GrpcMethod('UserService', 'findAll')
   async findAll(
     @Query('page') page: number = 1,
